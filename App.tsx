@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
-import { StyleSheet, Text, View, TouchableOpacity, Alert, Platform } from 'react-native';
+import { StyleSheet, Text, View, TouchableOpacity, Alert, Platform, ScrollView } from 'react-native';
 import { StatusBar } from 'expo-status-bar';
 import * as Notifications from 'expo-notifications';
 import * as Device from 'expo-device';
@@ -13,6 +13,13 @@ import {
   playAlarmSound, 
   stopAlarmSound 
 } from './src/audioService';
+
+// ==========================================
+// CONFIGURACIÓN DEL BACKEND
+// ==========================================
+// ⚠️ IMPORTANTE: Cuando subas el backend a internet, cambia esta URL
+// Por ahora usamos localhost para pruebas con Expo (requiere configuración especial)
+const BACKEND_URL = 'http://192.168.1.X:3000'; // <-- Cambia esto por tu IP local
 
 // Nombre del task de background
 const BACKGROUND_NOTIFICATION_TASK = 'BACKGROUND-NOTIFICATION-TASK';
@@ -38,7 +45,7 @@ TaskManager.defineTask(BACKGROUND_NOTIFICATION_TASK, async ({ data, error }) => 
     const notificationData = notification?.request?.content?.data;
     
     // Verificar si es una alarma
-    if (notificationData?.type === 'alarm' || notificationData?.status === 'encendido') {
+    if (notificationData?.type === 'alarm') {
       console.log('🚨 Alarma recibida en BACKGROUND');
       
       // Reproducir sonido de alarma
@@ -54,11 +61,17 @@ Notifications.registerTaskAsync(BACKGROUND_NOTIFICATION_TASK);
 export default function App() {
   const [expoPushToken, setExpoPushToken] = useState<string>('');
   const [isAlarmActive, setIsAlarmActive] = useState(false);
-  const [status, setStatus] = useState('En espera...');
-  const [lastNotification, setLastNotification] = useState<string>('');
+  const [status, setStatus] = useState('📱 App iniciada');
+  const [logs, setLogs] = useState<string[]>([]);
 
   const notificationListener = useRef<Notifications.Subscription>();
   const responseListener = useRef<Notifications.Subscription>();
+
+  // Helper para agregar logs en pantalla
+  const addLog = (message: string) => {
+    const timestamp = new Date().toLocaleTimeString();
+    setLogs(prev => [`[${timestamp}] ${message}`, ...prev].slice(0, 20));
+  };
 
   useEffect(() => {
     initializeApp();
@@ -69,6 +82,7 @@ export default function App() {
   }, []);
 
   const initializeApp = async () => {
+    addLog('Inicializando app...');
     await configureAlarmAudio();
     await setupNotificationChannel();
     await registerForPushNotifications();
@@ -88,7 +102,8 @@ export default function App() {
   const registerForPushNotifications = async () => {
     try {
       if (!Device.isDevice) {
-        Alert.alert('Nota', 'Las notificaciones push requieren un dispositivo físico');
+        Alert.alert('Nota', 'Las notificaciones push requieren un dispositivo físico. Usa un Android real, no el emulador.');
+        addLog('⚠️ Usando emulador - Notificaciones no funcionarán');
         return;
       }
 
@@ -102,20 +117,29 @@ export default function App() {
       
       if (finalStatus !== 'granted') {
         Alert.alert('Permiso denegado', 'No se otorgaron permisos de notificación');
+        addLog('❌ Permiso de notificaciones denegado');
         return;
       }
 
+      addLog('Obteniendo token de notificaciones...');
       const token = (await Notifications.getExpoPushTokenAsync()).data;
       setExpoPushToken(token);
+      addLog('✅ Token obtenido');
       
       // Enviar token al backend
-      const registered = await registerTokenWithBackend(token);
+      addLog('Registrando en backend...');
+      const registered = await registerTokenWithBackend(token, BACKEND_URL);
       if (registered) {
-        console.log('✅ Token registrado en backend');
+        addLog('✅ Teléfono registrado en backend');
+        setStatus('✅ Listo - Esperando alarmas');
+      } else {
+        addLog('❌ Error registrando en backend');
+        setStatus('⚠️ Error de conexión con backend');
       }
       
     } catch (error) {
-      console.error('Error registrando notificaciones:', error);
+      console.error('Error:', error);
+      addLog(`❌ Error: ${error}`);
     }
   };
 
@@ -124,19 +148,21 @@ export default function App() {
     notificationListener.current = Notifications.addNotificationReceivedListener(
       async (notification) => {
         const data = notification.request.content.data;
-        setLastNotification(new Date().toLocaleTimeString());
+        addLog(`📨 Notificación recibida`);
         
-        if (data?.type === 'alarm' || data?.status === 'encendido') {
+        if (data?.type === 'alarm') {
+          addLog('🚨 ALARMA DETECTADA');
           await activateAlarm();
         }
       }
     );
 
-    // Listener para respuesta a notificaciones (usuario toca la notificación)
+    // Listener para respuesta a notificaciones
     responseListener.current = Notifications.addNotificationResponseReceivedListener(
       async (response) => {
         const data = response.notification.request.content.data;
-        if (data?.type === 'alarm' || data?.status === 'encendido') {
+        if (data?.type === 'alarm') {
+          addLog('🚨 Alarma desde notificación');
           await activateAlarm();
         }
       }
@@ -145,22 +171,24 @@ export default function App() {
 
   const activateAlarm = async () => {
     setIsAlarmActive(true);
-    setStatus('🚨 ALARMA ACTIVADA 🚨');
+    setStatus('🚨🚨🚨 ALARMA ACTIVA 🚨🚨🚨');
+    addLog('🔊 Reproduciendo alarma');
     await playAlarmSound();
   };
 
   const deactivateAlarm = async () => {
     await stopAlarmSound();
     setIsAlarmActive(false);
-    setStatus('En espera...');
+    setStatus('✅ Listo - Esperando alarmas');
+    addLog('🔇 Alarma detenida');
   };
 
   const simulateAlarm = async () => {
-    // Simular notificación local
+    addLog('🧪 Simulando alarma local...');
     await Notifications.scheduleNotificationAsync({
       content: {
         title: '🚨 ALARMA DE PRUEBA 🚨',
-        body: 'Esta es una simulación de alarma',
+        body: 'Esta es una simulación',
         data: { type: 'alarm', status: 'encendido' },
         sound: 'default',
         priority: Notifications.AndroidNotificationPriority.MAX,
@@ -178,6 +206,7 @@ export default function App() {
       
       <Text style={styles.title}>🔔 Sistema de Alarma</Text>
       
+      {/* Status Principal */}
       <View style={styles.statusContainer}>
         <Text style={[
           styles.statusText,
@@ -185,20 +214,17 @@ export default function App() {
         ]}>
           {status}
         </Text>
-        {lastNotification && (
-          <Text style={styles.lastNotification}>
-            Última notificación: {lastNotification}
-          </Text>
-        )}
       </View>
 
+      {/* Token Info */}
       <View style={styles.infoCard}>
-        <Text style={styles.infoTitle}>📱 Dispositivo Registrado</Text>
+        <Text style={styles.infoTitle}>📱 Tu Teléfono</Text>
         <Text style={styles.tokenText} numberOfLines={1}>
           {expoPushToken ? expoPushToken.substring(0, 30) + '...' : 'Registrando...'}
         </Text>
       </View>
 
+      {/* Botones */}
       <View style={styles.buttonContainer}>
         {isAlarmActive ? (
           <TouchableOpacity 
@@ -219,12 +245,27 @@ export default function App() {
         )}
       </View>
 
+      {/* Logs */}
+      <View style={styles.logsContainer}>
+        <Text style={styles.logsTitle}>📋 Eventos Recientes:</Text>
+        <ScrollView style={styles.logsScroll}>
+          {logs.length === 0 ? (
+            <Text style={styles.logEmpty}>Esperando eventos...</Text>
+          ) : (
+            logs.map((log, index) => (
+              <Text key={index} style={styles.logEntry}>{log}</Text>
+            ))
+          )}
+        </ScrollView>
+      </View>
+
+      {/* Instrucciones */}
       <View style={styles.infoContainer}>
         <Text style={styles.infoText}>
-          ℹ️ Esta app usa notificaciones push para recibir alarmas.
+          ℹ️ Esta app se mantiene en segundo plano.
         </Text>
         <Text style={styles.infoText}>
-          Funciona incluso con la app cerrada.
+            No necesitas tenerla abierta.
         </Text>
       </View>
     </View>
@@ -236,65 +277,60 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: '#1a1a2e',
     alignItems: 'center',
-    justifyContent: 'center',
-    padding: 20,
+    paddingTop: 50,
+    paddingHorizontal: 20,
   },
   alarmContainer: {
     backgroundColor: '#dc2626',
   },
   title: {
-    fontSize: 28,
+    fontSize: 26,
     fontWeight: 'bold',
     color: '#fff',
-    marginBottom: 30,
+    marginBottom: 20,
   },
   statusContainer: {
     backgroundColor: 'rgba(255,255,255,0.1)',
-    padding: 25,
+    padding: 20,
     borderRadius: 15,
-    marginBottom: 25,
+    marginBottom: 15,
     minWidth: 280,
     alignItems: 'center',
   },
   statusText: {
-    fontSize: 18,
+    fontSize: 16,
     color: '#4ade80',
     fontWeight: '600',
     textAlign: 'center',
   },
   alarmStatusText: {
     color: '#fff',
-    fontSize: 22,
+    fontSize: 20,
     fontWeight: 'bold',
-  },
-  lastNotification: {
-    color: '#888',
-    fontSize: 12,
-    marginTop: 8,
   },
   infoCard: {
     backgroundColor: 'rgba(255,255,255,0.05)',
     padding: 15,
     borderRadius: 10,
-    marginBottom: 25,
+    marginBottom: 15,
     width: '100%',
   },
   infoTitle: {
     color: '#888',
     fontSize: 12,
-    marginBottom: 8,
+    marginBottom: 5,
     textTransform: 'uppercase',
     letterSpacing: 1,
   },
   tokenText: {
     color: '#4ade80',
-    fontSize: 12,
+    fontSize: 11,
     fontFamily: Platform.OS === 'ios' ? 'Courier' : 'monospace',
   },
   buttonContainer: {
     width: '100%',
     alignItems: 'center',
-    marginBottom: 30,
+    marginBottom: 15,
   },
   testButton: {
     backgroundColor: '#f59e0b',
@@ -326,16 +362,41 @@ const styles = StyleSheet.create({
     fontSize: 20,
     fontWeight: 'bold',
   },
+  logsContainer: {
+    flex: 1,
+    width: '100%',
+    backgroundColor: 'rgba(0,0,0,0.3)',
+    borderRadius: 10,
+    padding: 15,
+    marginBottom: 15,
+  },
+  logsTitle: {
+    color: '#888',
+    fontSize: 12,
+    marginBottom: 10,
+    textTransform: 'uppercase',
+  },
+  logsScroll: {
+    flex: 1,
+  },
+  logEntry: {
+    color: '#aaa',
+    fontSize: 11,
+    fontFamily: Platform.OS === 'ios' ? 'Courier' : 'monospace',
+    marginBottom: 4,
+  },
+  logEmpty: {
+    color: '#666',
+    fontSize: 12,
+    fontStyle: 'italic',
+  },
   infoContainer: {
-    position: 'absolute',
-    bottom: 40,
-    padding: 20,
+    padding: 10,
     alignItems: 'center',
   },
   infoText: {
     color: '#888',
-    fontSize: 12,
+    fontSize: 11,
     textAlign: 'center',
-    lineHeight: 18,
   },
 });

@@ -52,10 +52,9 @@ export const configureBackgroundNotifications = () => {
 /**
  * Envía el token push al backend
  */
-export const registerTokenWithBackend = async (token: string): Promise<boolean> => {
+export const registerTokenWithBackend = async (token: string, backendUrl: string): Promise<boolean> => {
   try {
-    // Reemplaza con tu URL de backend
-    const response = await fetch('https://tu-api.com/register-token', {
+    const response = await fetch(`${backendUrl}/register-token`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
