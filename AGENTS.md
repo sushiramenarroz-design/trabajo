@@ -14,6 +14,7 @@
 | **Repo** | trabajo |
 | **Branch principal** | `main` |
 | **Token** | `keys.md` (no versionar) |
+| **Último commit** | `01ca8d3` - feat: Agregar soporte completo de heartbeats y sistema de monitoreo de dispositivos |
 
 ### Comandos Git
 
@@ -35,319 +36,490 @@ git pull origin main
 
 ---
 
-## 📱 Descripción del Proyecto
+## ✅ ESTADO ACTUAL DEL PROYECTO
 
-**Nombre:** Alarma App (Expo/React Native)  
-**Propósito:** Aplicación Android que recibe alarmas mediante notificaciones push y reproduce sonido a máximo volumen.
+### ¿Qué está implementado?
 
-### Funcionamiento principal:
-1. Backend envía notificación push vía FCM (Firebase Cloud Messaging)
-2. App recibe notificación (incluso cerrada)
-3. Se reproduce sonido de alarma en loop
-4. Usuario debe detener manualmente la alarma
+| Componente | Estado | Ubicación |
+|------------|--------|-----------|
+| **App Móvil** | ✅ Completa | `alarma-app/` |
+| **Backend** | ✅ Completo | `alarma-app/backend/` |
+| **Dispositivo A (Heartbeat)** | ✅ Completo | `dispositivo-a/` |
+| **Documentación** | ✅ Completa | `GUÍA_PRINCIPIANTES.md`, `README.md` |
 
----
-
-## 🏗️ Estructura del Proyecto
-
-```
-c:\Users\DELL\trabajo\alarma\alarma-app/
-├── App.tsx                      # Entry point principal
-├── app.json                     # Configuración Expo (permisos, plugins)
-├── package.json                 # Dependencias
-├── src/
-│   ├── notificationService.ts   # Servicio de notificaciones push
-│   └── audioService.ts          # Servicio de reproducción de audio
-├── backend/
-│   ├── server.js                # Servidor Express para enviar alarmas
-│   ├── package.json             # Dependencias backend
-│   └── .env.example             # Variables de entorno
-├── assets/
-│   ├── icon.png                 # Icono de la app
-│   ├── splash-icon.png          # Icono splash
-│   ├── alarm-sound.mp3          # Sonido de alarma (AGREGAR)
-│   └── notification-icon.png    # Icono notificaciones
-└── README.md                    # Documentación
-```
+### Funcionalidades implementadas:
+- ✅ App recibe notificaciones push en foreground y background
+- ✅ Backend recibe heartbeats y detecta timeouts
+- ✅ Backend envía alarmas vía Expo Push
+- ✅ Dispositivo A envía heartbeats cada 30s
+- ✅ App reproduce sonido a máximo volumen
+- ✅ App muestra logs en pantalla
+- ✅ Backend expone endpoints de monitoreo
 
 ---
 
-## 🛠️ Tecnología Stack
+## 🏗️ Arquitectura del Sistema Completo
 
-| Categoría | Tecnología | Versión |
-|-----------|-----------|---------|
-| Framework | Expo SDK | 52+ |
-| Lenguaje | TypeScript | 5.x |
-| UI | React Native | 0.76+ |
-| Notificaciones | expo-notifications | ~0.29 |
-| Audio | expo-av | ~14.0 |
-| Background | expo-task-manager | ~12.0 |
-| Backend | Node.js + Express | 18+ |
-| Push Service | Expo Push / FCM | - |
+Este proyecto implementa un sistema **Dead Man's Switch** (interruptor de hombre muerto):
+
+```
+┌─────────────────────────────────────────────────────────────────────────┐
+│                        ARQUITECTURA COMPLETA                            │
+└─────────────────────────────────────────────────────────────────────────┘
+
+  DISPOSITIVO A                    BACKEND                      APP MÓVIL
+  (A Monitorear)                  (Servidor)                   (Tu Teléfono)
+       │                               │                              │
+       │───💓 heartbeat ──────────────▶│                              │
+       │    cada 30s                   │                              │
+       │                               │                              │
+       │                               │◄──── register-token ─────────│
+       │                               │      (al instalar app)       │
+       │                               │                              │
+       │        [timeout: 2min]        │                              │
+       │◄────────── X ─────────────────┤                              │
+       │    (no hay heartbeat)         │                              │
+       │                               │                              │
+       │                               │────── sendPushNotification ─▶│
+       │                               │                              │
+       │                               │                              │───🔊 ALARMA!
+       │                               │                              │
+```
+
+### Componentes:
+
+| Componente | Tecnología | Ubicación | Función |
+|------------|-----------|-----------|---------|
+| **Dispositivo A** | Python 3 | PC/Servidor/Raspberry a monitorear | Enviar heartbeats cada 30s |
+| **Backend** | Node.js + Express | Servidor/Cloud | Recibir heartbeats, detectar caídas, enviar alarmas |
+| **App Móvil** | React Native (Expo) | Tu teléfono Android | Recibir push notifications, reproducir alarma |
+
+---
+
+## 📂 Estructura del Proyecto
+
+```
+c:\Users\DELL\trabajo\alarma\
+│
+├── AGENTS.md                    ← Este archivo (documentación técnica)
+├── GUÍA_PRINCIPIANTES.md        ← Guía paso a paso para usuarios
+├── keys.md                      ← Token GitHub (NO versionar)
+│
+├── alarma-app/                  ← 📱 App Móvil (Expo)
+│   ├── App.tsx                  ← Pantalla principal con logs y estado
+│   ├── app.json                 ← Config Expo + permisos Android
+│   ├── package.json
+│   ├── src/
+│   │   ├── notificationService.ts   ← Registro de token con backend
+│   │   └── audioService.ts          ← Control de audio
+│   ├── backend/                 ← 🖥️ Backend (Node.js)
+│   │   ├── server.js            ← Servidor principal + lógica de heartbeats
+│   │   ├── package.json
+│   │   └── .env.example
+│   ├── dispositivo-a/           ← 💓 Script heartbeat (copia)
+│   │   ├── heartbeat.py
+│   │   └── README.md
+│   ├── GUÍA_PRINCIPIANTES.md    ← Guía de uso incluida
+│   └── README.md
+│
+└── dispositivo-a/               ← 💓 Script Python (original)
+    ├── heartbeat.py             ← Script que envía señales de vida
+    └── README.md
+```
+
+---
+
+## 🛠️ Stack Tecnológico
+
+### Dispositivo A (Heartbeat Client)
+| Aspecto | Tecnología |
+|---------|-----------|
+| Lenguaje | Python 3.8+ |
+| Librerías | built-in (urllib, json, time, socket, platform) |
+| Ejecución | Script continuo con reintentos |
+
+### Backend (Monitor & Alert Server)
+| Aspecto | Tecnología |
+|---------|-----------|
+| Runtime | Node.js 18+ |
+| Framework | Express.js 4.x |
+| Push Notifications | expo-server-sdk |
+| Almacenamiento | Memoria (Map/Set) |
+| CORS | cors |
+| Variables de entorno | dotenv |
+
+### App Móvil (Alarm Receiver)
+| Aspecto | Tecnología |
+|---------|-----------|
+| Framework | Expo SDK 52+ |
+| Lenguaje | TypeScript |
+| UI | React Native |
+| Notificaciones | expo-notifications |
+| Audio | expo-av |
+| Background Tasks | expo-task-manager |
+| Device Info | expo-device |
 
 ---
 
 ## ⚡ Comandos de Desarrollo
 
-### App (Frontend)
+### Dispositivo A
 ```bash
-cd alarma-app
-
-# Iniciar en desarrollo
-npx expo start
-
-# Iniciar en Android
-npm run android
-
-# Construir con EAS
-npx eas build --platform android --profile preview
-
-# Limpiar caché
-npx expo start --clear
+cd dispositivo-a
+python heartbeat.py
 ```
 
 ### Backend
 ```bash
 cd alarma-app/backend
-
-# Instalar dependencias
 npm install
+npm run dev          # Puerto 3000
+```
 
-# Desarrollo con hot reload
-npm run dev
+Endpoints disponibles:
+- `POST /heartbeat` - Recibe heartbeats del Dispositivo A
+- `GET /devices` - Lista dispositivos monitoreados con tiempo desde último ping
+- `GET /devices/:id` - Estado de un dispositivo específico
+- `POST /register-token` - Registra teléfono para recibir alarmas
+- `POST /trigger-alarm` - Fuerza alarma manualmente
+- `GET /status` - Estado general del sistema (dispositivos online/offline, teléfonos registrados)
 
-# Producción
-npm start
+### App Móvil
+```bash
+cd alarma-app
+npm install
+npx expo start       # Genera QR para Expo Go
+```
+
+**⚠️ IMPORTANTE**: Antes de iniciar, edita `App.tsx` y actualiza:
+```typescript
+const BACKEND_URL = 'http://192.168.1.X:3000';  // Tu IP local aquí
 ```
 
 ---
 
-## 📋 Flujo de Datos
+## 🔧 Configuración Clave
+
+### Backend - Variables de Timeout
+
+En `backend/server.js`:
+
+```javascript
+// Cuánto tiempo esperar sin heartbeat antes de alertar
+const TIMEOUT_MS = 2 * 60 * 1000;  // 2 minutos
+
+// Frecuencia de verificación
+const CHECK_INTERVAL_MS = 30 * 1000;  // Cada 30 segundos
+```
+
+### Dispositivo A - Configuración
+
+En `dispositivo-a/heartbeat.py`:
+
+```python
+# URL del backend (cambiar cuando esté en producción)
+BACKEND_URL = "http://localhost:3000/heartbeat"
+# En producción:
+# BACKEND_URL = "https://tu-servidor.com/heartbeat"
+
+# Identificador único
+DEVICE_ID = "dispositivo-principal"
+
+# Frecuencia de envío (debe ser menor que TIMEOUT_MS del backend)
+INTERVALO_SEGUNDOS = 30
+
+# Reintentos ante fallo
+MAX_REINTENTOS = 3
+```
+
+### App Móvil - URL del Backend
+
+En `App.tsx`:
+
+```typescript
+// ⚠️ CRÍTICO: Usar IP local de tu computadora, NO localhost
+// Obtener IP: ejecutar 'ipconfig' en CMD
+const BACKEND_URL = 'http://192.168.1.X:3000';  // Ej: 192.168.1.45
+```
+
+---
+
+## 📋 Flujo de Datos Detallado
+
+### 1. Inicialización
 
 ```
-┌─────────────────────────────────────────────────────────────────┐
-│                         FLUJO DE ALARMA                         │
-└─────────────────────────────────────────────────────────────────┘
+1. Backend inicia → setInterval cada 30s para verificar dispositivos
+2. App inicia → Obtiene push token → POST /register-token
+3. Dispositivo A inicia → Envía heartbeat inmediatamente
+```
 
-1. DETECCIÓN (Tu sistema/Backend)
-   │
-   │ POST /trigger-alarm
-   │ { "message": "Alarma detectada" }
-   ▼
-2. BACKEND (Node.js/Express)
-   │
-   │ expo.sendPushNotificationsAsync()
-   ▼
-3. EXPO PUSH SERVICE
-   │
-   │ FCM (Firebase Cloud Messaging)
-   ▼
-4. DISPOSITIVO ANDROID
-   │
-   ├─► Si app en FOREGROUND:
-   │   └─► notificationListener ──► playAlarmSound()
-   │
-   └─► Si app en BACKGROUND:
-       └─► Background Task ──► playAlarmSound()
+### 2. Operación Normal
+
+```
+Cada 30s:
+Dispositivo A ──POST /heartbeat──▶ Backend
+                                   Backend guarda timestamp
+                                   Marca como "online"
+
+Cada 30s (check del backend):
+Backend revisa todos los dispositivos
+Si (ahora - lastPing) < 2min → OK, mostrar segundos restantes
+Si (ahora - lastPing) > 2min → OFFLINE → Enviar alarma
+```
+
+### 3. Detección de Caída
+
+```
+Dispositivo A se apaga/crash/pierde red
+↓
+No envía más heartbeats
+↓
+Backend (en próximo check):
+  Detecta: último heartbeat hace > 2min
+  Marca dispositivo como "offline"
+  Llama sendAlarmToAllDevices()
+  Log: "💀 {deviceId} está OFFLINE!"
+  Log: "🚨 ENVIANDO ALARMA: {deviceId} no responde..."
+↓
+Expo Push Service envía notificación
+↓
+App recibe push (incluso cerrada)
+↓
+Background Task ejecuta playAlarmSound()
+↓
+🔊 ALARMA SUENA EN EL TELÉFONO
+↓
+Pantalla se pone ROJA
+↓
+Usuario presiona "DETENER ALARMA"
+```
+
+### 4. Recuperación
+
+```
+Dispositivo A vuelve a funcionar
+↓
+Envía heartbeat
+↓
+Backend detecta que estaba offline
+↓
+Marca como "online"
+↓
+Envía notificación: "✅ {deviceId} RECUPERADO"
 ```
 
 ---
 
 ## 🔑 Conceptos Clave
 
-### ¿Por qué Notificaciones Push vs Polling?
+### Dead Man's Switch
+El sistema asume que el dispositivo está **muerto** a menos que **demuestre lo contrario** periódicamente. Es como un "botón de seguridad" que si no se presiona, dispara la alarma.
 
-| Característica | Notificaciones Push | Polling HTTP |
-|----------------|---------------------|--------------|
-| App cerrada | ✅ Funciona | ❌ No funciona |
-| Latencia | ⚡ < 5 segundos | ⏱️ Minutos |
-| Batería | 🔋 Bajo consumo | 🔋 Alto consumo |
-| Confiabilidad | ✅ Alta | ⚠️ Variable |
-| Complejidad | Media | Baja |
+### Heartbeat
+Señal periódica (cada 30s) que dice "estoy vivo". Contiene:
+- `deviceId`: Identificador único
+- `timestamp`: Momento del envío
+- `hostname`: Nombre de la máquina
+- `platform`: Sistema operativo
 
-### Manejo de Background (Crítico)
+Si faltan 2 heartbeats consecutivos (60s), el backend considera que el dispositivo falló.
 
+### Expo Push Notifications
+Servicio que permite enviar notificaciones a apps React Native, incluso cuando están cerradas. Usa Firebase Cloud Messaging (FCM) en Android.
+
+### Background Task
+Código JavaScript que se ejecuta cuando llega una notificación push y la app está cerrada. Permite reproducir sonido sin que el usuario abra la app.
+
+Implementación en `App.tsx`:
 ```typescript
-// ESTO SE EJECUTA INCLUSO CON LA APP CERRADA
-TaskManager.defineTask('BACKGROUND-NOTIFICATION-TASK', async ({ data }) => {
-  const notification = data.notification;
-  const notificationData = notification?.request?.content?.data;
-  
+TaskManager.defineTask(BACKGROUND_NOTIFICATION_TASK, async ({ data }) => {
+  const notificationData = data.notification?.request?.content?.data;
   if (notificationData?.type === 'alarm') {
     await configureAlarmAudio();
-    await playAlarmSound(); // ¡Reproduce alarma!
+    await playAlarmSound(); // ¡Reproduce incluso con app cerrada!
   }
-});
-```
-
-### Configuración de Audio
-
-```typescript
-await Audio.setAudioModeAsync({
-  staysActiveInBackground: true,  // Crítico para background
-  playsInSilentModeIOS: true,     // Ignora modo silencio
-  shouldDuckAndroid: false,       // No baja volumen de otras apps
-  playThroughEarpieceAndroid: false, // Usa altavoz principal
 });
 ```
 
 ---
 
-## 🔧 Configuración Requerida
+## 🧪 Testing / Pruebas
 
-### 1. Firebase (Obligatorio para Android)
+### Flujo de prueba completo:
 
-1. Crear proyecto en [Firebase Console](https://console.firebase.google.com/)
-2. Agregar app Android
-3. Descargar `google-services.json` → colocar en `alarma-app/`
-4. El package name debe coincidir con `app.json`:
-   ```json
-   {
-     "android": {
-       "package": "com.tuusuario.alarmaapp"
-     }
-   }
-   ```
+```bash
+# Terminal 1: Backend
+cd alarma-app/backend
+npm run dev
 
-### 2. Archivo de Sonido
+# Terminal 2: Dispositivo A
+cd dispositivo-a
+python heartbeat.py
 
-- Descargar sonido de alarma (`.mp3` o `.wav`)
-- Colocar en: `alarma-app/assets/alarm-sound.mp3`
-- Referenciar en `app.json`:
-  ```json
-  {
-    "plugins": [
-      ["expo-notifications", {
-        "sounds": ["./assets/alarm-sound.wav"]
-      }]
-    ]
-  }
-  ```
+# Terminal 3: App (genera QR)
+cd alarma-app
+npx expo start
+# Escanear QR con Expo Go en Android
+```
 
-### 3. Permisos Android (ya configurados en app.json)
+### Verificar heartbeat llega:
+```bash
+curl http://localhost:3000/devices
+```
 
-```json
-{
-  "android": {
-    "permissions": [
-      "RECEIVE_BOOT_COMPLETED",
-      "WAKE_LOCK",
-      "FOREGROUND_SERVICE",
-      "NOTIFICATIONS",
-      "VIBRATE",
-      "MODIFY_AUDIO_SETTINGS"
-    ]
-  }
-}
+### Simular caída (prueba real):
+1. `CTRL+C` en el terminal del Dispositivo A
+2. Esperar 2 minutos exactos
+3. Ver en backend: "💀 dispositivo-principal está OFFLINE!"
+4. Ver en backend: "🚨 ENVIANDO ALARMA..."
+5. Teléfono debe sonar automáticamente
+
+### Forzar alarma manual:
+```bash
+curl -X POST http://localhost:3000/trigger-alarm \
+  -H "Content-Type: application/json" \
+  -d '{"message": "Prueba manual", "deviceId": "test"}'
 ```
 
 ---
 
 ## 🐛 Debugging
 
-### Logs importantes
+### Ver logs del backend
 ```bash
-# Ver logs del dispositivo
-npx expo logs
-
-# Filtrar por tag
-adb logcat -s "ReactNative"
+cd alarma-app/backend
+npm run dev
+# Observa la salida en tiempo real
 ```
 
-### Problemas comunes y soluciones
-
-| Problema | Causa probable | Solución |
-|----------|---------------|----------|
-| No llegan notificaciones | Token no registrado | Verificar POST a /register-token |
-| No suena alarma | Archivo de audio faltante | Agregar alarm-sound.mp3 a assets |
-| App no inicia en background | Optimización batería | Deshabilitar en ajustes del dispositivo |
-| Sonido bajo | Volumen del sistema | Implementar control de volumen nativo |
-| Notificación no persistente | Configuración canal | Verificar AndroidImportance.MAX |
-
----
-
-## 🚀 Deployment
-
-### Android (APK/AAB)
-
-```bash
-# Configurar EAS
-npx eas login
-npx eas build:configure
-
-# Construir APK de prueba
-npx eas build --platform android --profile preview
-
-# Construir AAB para Play Store
-npx eas build --platform android --profile production
+Esperar ver:
+```
+💓 Heartbeat recibido: dispositivo-principal (hostname)
+🔍 [14:30:15] Verificando dispositivos...
+   ✅ dispositivo-principal OK (alarma en 90s si no responde)
 ```
 
-### Backend
+### Ver logs de la app
+Los logs aparecen en la pantalla de la app en la sección "📋 Eventos Recientes"
 
-```bash
-# Docker (recomendado)
-docker build -t alarma-backend .
-docker run -p 3000:3000 alarma-backend
+### Problemas comunes:
 
-# O directamente
-npm start
-```
-
----
-
-## 📚 Recursos Útiles
-
-- [Expo Notifications Docs](https://docs.expo.dev/versions/latest/sdk/notifications/)
-- [Expo AV Audio Docs](https://docs.expo.dev/versions/latest/sdk/av/)
-- [Expo Push Notification Tool](https://expo.dev/notifications)
-- [Firebase Console](https://console.firebase.google.com/)
-
----
-
-## 🔄 Convenciones de Código
-
-### Estilo
-- Usar TypeScript estricto
-- Nombres de funciones: camelCase
-- Nombres de componentes: PascalCase
-- Constants: UPPER_SNAKE_CASE
-
-### Estructura de commits
-```
-feat: nueva funcionalidad
-fix: corrección de bug
-docs: documentación
-refactor: refactorización
-chore: tareas de mantenimiento
-```
-
----
-
-## 📝 Tareas Pendientes / Mejoras Futuras
-
-- [ ] Implementar control de volumen del sistema (nativo)
-- [ ] Agregar soporte para iOS
-- [ ] Implementar reconocimiento de voz para detener alarma
-- [ ] Agregar notificaciones SMS como fallback
-- [ ] Implementar geolocalización al activar alarma
-- [ ] Agregar múltiples tonos de alarma configurables
-- [ ] Implementar historial de alarmas
-- [ ] Agregar autenticación de usuarios
+| Síntoma | Causa | Solución |
+|---------|-------|----------|
+| App no conecta a backend | IP incorrecta | Actualizar `BACKEND_URL` en App.tsx con tu IP local |
+| Backend no recibe heartbeats | URL incorrecta | Verificar `BACKEND_URL` en heartbeat.py |
+| No suena alarma cerrada | Optimización batería | Configurar "Sin restricciones" para Expo Go |
+| "No hay teléfonos registrados" | App no se registró | Reabrir app, verificar conexión |
 
 ---
 
 ## ⚠️ Limitaciones Conocidas
 
-1. **Algunos dispositivos Android** (Xiaomi, Samsung) matan apps en background agresivamente
-   - Solución: Pedir al usuario deshabilitar optimización de batería
+### 1. Red Local (Modo Desarrollo Actual)
+- Todo funciona en red WiFi local
+- Dispositivo A, Backend y Teléfono deben estar en la misma red
+- Para producción: subir backend a la nube (Railway, Render, etc.)
 
-2. **Modo bajo consumo** puede detener la app
-   - Solución: Usar `WAKE_LOCK` permiso (ya configurado)
+### 2. Optimización de Batería (Android)
+Algunos fabricantes matan apps agresivamente:
+- **Xiaomi**: Configuración → Apps → Permisos → Inicio automático → Expo Go
+- **Samsung**: Configuración → Cuidado del dispositivo → Batería → Apps sin restricciones
+- **Huawei**: Configuración → Apps → Inicio → Expo Go
 
-3. **Control de volumen del sistema** requiere módulo nativo
-   - Actual: Solo controla volumen del sonido de la app
-   - Futuro: Integrar con módulo nativo para volumen del sistema
+### 3. Requiere Internet estable
+- Si Dispositivo A pierde internet → Falsa alarma
+- Si Teléfono pierde internet → No recibe alarma
+- Considerar implementar "grace period" o verificación de red
+
+### 4. Sonido de alarma
+- Debes agregar archivo `assets/alarm-sound.mp3` manualmente
+- No incluido en repo por derechos de autor
+- Descargar de freesound.org o similar
 
 ---
 
-*Documentación generada automáticamente. Mantener actualizada al hacer cambios significativos.*
+## 🚀 Roadmap a Producción
+
+### Fase 1: Desarrollo Local (✅ COMPLETADO)
+- [x] Backend en localhost
+- [x] App vía Expo Go
+- [x] Heartbeat en Python local
+- [x] Documentación completa
+
+### Fase 2: Deploy Backend (⏭️ SIGUIENTE)
+- [ ] Crear cuenta en Railway/Render/Fly.io
+- [ ] Crear `Dockerfile` para backend
+- [ ] Deploy backend
+- [ ] Obtener URL pública HTTPS
+- [ ] Actualizar URLs en Dispositivo A y App
+
+### Fase 3: Build App Nativa
+- [ ] Configurar EAS Build (Expo Application Services)
+- [ ] Crear cuenta Expo
+- [ ] Generar APK/AAB con `eas build`
+- [ ] Instalar APK directo en teléfono (sin Expo Go)
+- [ ] Configurar Firebase para notificaciones propias
+
+### Fase 4: Producción Avanzada
+- [ ] Base de datos persistente (PostgreSQL/MongoDB)
+- [ ] Panel web de administración
+- [ ] Múltiples dispositivos monitoreados
+- [ ] Histórico de eventos
+- [ ] Notificaciones SMS como fallback
+- [ ] Autenticación de usuarios
+
+---
+
+## 📚 Documentación Adicional
+
+| Archivo | Contenido |
+|---------|-----------|
+| `GUÍA_PRINCIPIANTES.md` | Guía paso a paso detallada para usuarios sin experiencia |
+| `README.md` (root) | Documentación general del proyecto |
+| `dispositivo-a/README.md` | Instrucciones específicas del script Python |
+| `alarma-app/README.md` | Documentación de la app Expo |
+
+### Recursos externos:
+- **Expo Docs**: https://docs.expo.dev
+- **Expo Push Tool**: https://expo.dev/notifications
+- **Railway (hosting)**: https://railway.app
+- **Render (hosting)**: https://render.com
+
+---
+
+## 🔄 Convenciones de Código
+
+### Commits Git
+```
+feat: nueva funcionalidad
+fix: corrección de bug
+docs: documentación
+refactor: refactorización sin cambios funcionales
+chore: tareas de mantenimiento
+style: cambios de formato
+```
+
+### Estilo de código
+- **Python**: PEP 8, nombres en español (usuario prefiere español)
+- **TypeScript/JavaScript**: ESLint + Prettier, camelCase
+- **Comentarios**: En español
+- **Variables/Funciones**: Descriptivas y en español
+
+---
+
+## 📞 Checklist para Continuar
+
+Cuando retomes este proyecto, verifica:
+
+- [ ] Repositorio clonado y actualizado (`git pull origin main`)
+- [ ] Backend: `npm install` ejecutado
+- [ ] App: `npm install` ejecutado
+- [ ] IP local actualizada en `App.tsx`
+- [ ] URL del backend configurada en `heartbeat.py` (si es producción)
+- [ ] Archivo `assets/alarm-sound.mp3` agregado (opcional, para sonido)
+- [ ] Dispositivo A, Backend y Teléfono en misma red (modo desarrollo)
+
+---
+
+*Documentación actualizada el 2026-02-17. Estado: ✅ Proyecto base completado, listo para fase de deploy.*
