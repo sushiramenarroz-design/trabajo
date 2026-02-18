@@ -43,11 +43,13 @@ git pull origin main
 | Aspecto | Valor |
 |---------|-------|
 | **Estado** | ✅ **FUNCIONANDO** |
-| **Ubicación** | Servidor VPS |
-| **Puerto** | `3001` (cambiado de 3000 por conflicto) |
-| **Archivo de config** | `.env` (PORT=3001) |
-| **Proceso** | Corriendo con Node.js |
-| **Documentación** | `DEPLOY.md` creado |
+| **IP Pública** | `216.238.87.147` |
+| **Puerto** | `3001` |
+| **URL Base** | `http://216.238.87.147:3001` |
+| **Proceso** | PM2 (`alarma-backend`) |
+| **PID** | `270262` |
+| **Auto-inicio** | ✅ Configurado via systemd |
+| **Firewall** | ✅ Puerto 3001 abierto (UFW) |
 
 ### Verificación en Servidor
 
@@ -223,13 +225,15 @@ python heartbeat.py
 
 ### Backend (Ya desplegado en servidor)
 ```bash
-# En servidor VPS:
-cd alarma-app/backend
-npm install
-npm start          # Puerto 3001 (configurado en .env)
+# El backend YA está corriendo con PM2 en el servidor
+# IP: 216.238.87.147 - Puerto: 3001
 
 # Verificar estado:
-curl http://localhost:3001/status
+pm2 status
+pm2 logs alarma-backend
+
+# Verificar desde cualquier lugar:
+curl http://216.238.87.147:3001/status
 ```
 
 Endpoints disponibles (Puerto 3001):
@@ -259,6 +263,17 @@ const BACKEND_URL = 'http://192.168.1.X:3000';  // Tu IP local aquí
 ---
 
 ## 🔧 Configuración Clave
+
+### Servidor de Producción (Actual)
+
+| Configuración | Valor |
+|---------------|-------|
+| **IP Pública** | `216.238.87.147` |
+| **Puerto** | `3001` |
+| **URL Base** | `http://216.238.87.147:3001` |
+| **Proceso** | PM2 (`alarma-backend`, PID 270262) |
+| **Ubicación** | `/home/vasiliy/alarma-app/backend` |
+| **Firewall** | UFW - Puerto 3001 ALLOW |
 
 ### Backend - Variables de Timeout y Puerto
 
@@ -546,12 +561,20 @@ Algunos fabricantes matan apps agresivamente:
 - [x] Heartbeats funcionando en producción
 - [x] Archivo `DEPLOY.md` creado con documentación
 
-### Fase 3: Configurar Acceso Público (⏭️ SIGUIENTE)
-- [ ] Configurar PM2 para mantener activo tras cerrar SSH
-- [ ] Abrir firewall o configurar reverse proxy (Nginx)
-- [ ] Configurar dominio (opcional)
-- [ ] Actualizar URLs en Dispositivo A (usar IP/dominio del servidor)
-- [ ] Actualizar URL en App móvil (BACKEND_URL)
+### Fase 3: Configurar Acceso Público (✅ COMPLETADO)
+- [x] Configurar PM2 para mantener activo tras cerrar SSH
+- [x] Abrir firewall (UFW - puerto 3001)
+- [x] IP pública obtenida: `216.238.87.147`
+- [x] Backend accesible públicamente
+- [ ] ~~Configurar dominio~~ (Opcional - postergado)
+
+### Fase 4: Configurar Dispositivos (⏭️ SIGUIENTE)
+- [ ] Actualizar Dispositivo A: `BACKEND_URL = "http://216.238.87.147:3001/heartbeat"`
+- [ ] Actualizar App Móvil: `BACKEND_URL = "http://216.238.87.147:3001"`
+- [ ] Sincronizar cambios con GitHub
+- [ ] Probar heartbeat desde Dispositivo A al servidor
+- [ ] Probar registro de token desde App al servidor
+- [ ] Prueba completa: detener heartbeat → esperar alarma
 
 ### Fase 3: Build App Nativa
 - [ ] Configurar EAS Build (Expo Application Services)
@@ -613,30 +636,30 @@ style: cambios de formato
 
 Cuando retomes este proyecto:
 
-### En el Servidor (ya configurado):
-- [x] Backend desplegado y funcionando (puerto 3001)
-- [x] Heartbeats siendo procesados correctamente
-- [ ] **Configurar PM2** para mantener activo tras cerrar SSH
-- [ ] **Abrir firewall** o configurar Nginx para acceso público
-- [ ] **Obtener IP pública** o configurar dominio del servidor
+### En el Servidor (✅ COMPLETADO):
+- [x] Backend desplegado y funcionando
+- [x] **PM2 configurado** (proceso `alarma-backend`, auto-inicio activo)
+- [x] **Firewall configurado** (UFW puerto 3001 abierto)
+- [x] **IP pública**: `216.238.87.147`
+- [x] Acceso público verificado: `http://216.238.87.147:3001`
 
-### En el Proyecto Local:
-- [ ] Actualizar `App.tsx` con URL del servidor (no localhost)
+### En el Proyecto Local (⏭️ AHORA):
+- [ ] **Actualizar `App.tsx`**:
   ```typescript
-  const BACKEND_URL = 'http://IP_DEL_SERVIDOR:3001';
+  const BACKEND_URL = 'http://216.238.87.147:3001';
   ```
-- [ ] Actualizar `dispositivo-a/heartbeat.py` con URL del servidor
+- [ ] **Actualizar `dispositivo-a/heartbeat.py`**:
   ```python
-  BACKEND_URL = "http://IP_DEL_SERVIDOR:3001/heartbeat"
+  BACKEND_URL = "http://216.238.87.147:3001/heartbeat"
   ```
-- [ ] Sincronizar cambios con GitHub (`git pull origin main`)
+- [ ] Sincronizar cambios con GitHub (`git add -A && git commit -m "config: URLs producción" && git push`)
 - [ ] Agregar archivo `assets/alarm-sound.mp3` (opcional pero recomendado)
 
-### Pruebas de Integración:
-- [ ] Dispositivo A envía heartbeats al servidor
-- [ ] Backend detecta dispositivo "online" en `/status`
+### Pruebas de Integración (Después de actualizar URLs):
+- [ ] Dispositivo A envía heartbeats a `216.238.87.147:3001`
+- [ ] Backend detecta dispositivo "online" en `/devices`
 - [ ] App se registra correctamente en backend
-- [ ] Simular caída (detener heartbeat) y verificar alarma en teléfono
+- [ ] Simular caída (detener heartbeat) → esperar 2 min → verificar alarma en teléfono
 
 ---
 
