@@ -14,7 +14,7 @@
 | **Repo** | trabajo |
 | **Branch principal** | `main` |
 | **Token** | `keys.md` (no versionar) |
-| **Último commit** | `01ca8d3` - feat: Agregar soporte completo de heartbeats y sistema de monitoreo de dispositivos |
+| **Último commit** | `f6458f1` - docs: Actualizar AGENTS.md con estado actual completo |
 
 ### Comandos Git
 
@@ -36,6 +36,52 @@ git pull origin main
 
 ---
 
+## 🚀 DEPLOY COMPLETADO
+
+### Backend en Producción
+
+| Aspecto | Valor |
+|---------|-------|
+| **Estado** | ✅ **FUNCIONANDO** |
+| **Ubicación** | Servidor VPS |
+| **Puerto** | `3001` (cambiado de 3000 por conflicto) |
+| **Archivo de config** | `.env` (PORT=3001) |
+| **Proceso** | Corriendo con Node.js |
+| **Documentación** | `DEPLOY.md` creado |
+
+### Verificación en Servidor
+
+```bash
+# El backend responde correctamente:
+curl http://localhost:3001/status
+
+# Respuesta esperada:
+{
+  "status": "ok",
+  "timestamp": "2026-02-18T20:37:32.984Z",
+  "uptime": 38.227,
+  "config": {
+    "timeoutMinutes": 2,
+    "checkIntervalSeconds": 30
+  },
+  "stats": {
+    "totalDevices": 0,
+    "registeredTokens": 0
+  },
+  "devices": []
+}
+```
+
+### Heartbeats en Producción
+
+El backend ya está recibiendo heartbeats:
+```
+💓 Heartbeat recibido: test-device (raspberry-pi)
+💓 Heartbeat recibido: test-device (raspberry-pi)
+```
+
+---
+
 ## ✅ ESTADO ACTUAL DEL PROYECTO
 
 ### ¿Qué está implementado?
@@ -43,18 +89,20 @@ git pull origin main
 | Componente | Estado | Ubicación |
 |------------|--------|-----------|
 | **App Móvil** | ✅ Completa | `alarma-app/` |
-| **Backend** | ✅ Completo | `alarma-app/backend/` |
+| **Backend** | ✅ **DESPLEGADO Y FUNCIONANDO** | `Servidor VPS - Puerto 3001` |
 | **Dispositivo A (Heartbeat)** | ✅ Completo | `dispositivo-a/` |
 | **Documentación** | ✅ Completa | `GUÍA_PRINCIPIANTES.md`, `README.md` |
 
 ### Funcionalidades implementadas:
 - ✅ App recibe notificaciones push en foreground y background
+- ✅ **Backend desplegado en servidor** (puerto 3001)
 - ✅ Backend recibe heartbeats y detecta timeouts
 - ✅ Backend envía alarmas vía Expo Push
 - ✅ Dispositivo A envía heartbeats cada 30s
 - ✅ App reproduce sonido a máximo volumen
 - ✅ App muestra logs en pantalla
 - ✅ Backend expone endpoints de monitoreo
+- ✅ Heartbeats funcionando en producción
 
 ---
 
@@ -113,18 +161,22 @@ c:\Users\DELL\trabajo\alarma\
 │   │   ├── notificationService.ts   ← Registro de token con backend
 │   │   └── audioService.ts          ← Control de audio
 │   ├── backend/                 ← 🖥️ Backend (Node.js)
-│   │   ├── server.js            ← Servidor principal + lógica de heartbeats
-│   │   ├── package.json
-│   │   └── .env.example
+│   │   ├── server.js            ← Servidor principal (340 líneas)
+│   │   ├── package.json         ← Dependencias
+│   │   ├── .env                 ← Variables de entorno (PORT=3001)
+│   │   └── .env.example         ← Template para configuración
 │   ├── dispositivo-a/           ← 💓 Script heartbeat (copia)
 │   │   ├── heartbeat.py
 │   │   └── README.md
 │   ├── GUÍA_PRINCIPIANTES.md    ← Guía de uso incluida
 │   └── README.md
 │
-└── dispositivo-a/               ← 💓 Script Python (original)
-    ├── heartbeat.py             ← Script que envía señales de vida
-    └── README.md
+├── dispositivo-a/               ← 💓 Script Python (original)
+│   ├── heartbeat.py             ← Script que envía señales de vida
+│   └── README.md
+│
+└── DEPLOY.md                    ← 📋 Guía de despliegue en producción
+    (creado por Kimi en el servidor)
 ```
 
 ---
@@ -169,20 +221,28 @@ cd dispositivo-a
 python heartbeat.py
 ```
 
-### Backend
+### Backend (Ya desplegado en servidor)
 ```bash
+# En servidor VPS:
 cd alarma-app/backend
 npm install
-npm run dev          # Puerto 3000
+npm start          # Puerto 3001 (configurado en .env)
+
+# Verificar estado:
+curl http://localhost:3001/status
 ```
 
-Endpoints disponibles:
+Endpoints disponibles (Puerto 3001):
 - `POST /heartbeat` - Recibe heartbeats del Dispositivo A
 - `GET /devices` - Lista dispositivos monitoreados con tiempo desde último ping
 - `GET /devices/:id` - Estado de un dispositivo específico
 - `POST /register-token` - Registra teléfono para recibir alarmas
 - `POST /trigger-alarm` - Fuerza alarma manualmente
 - `GET /status` - Estado general del sistema (dispositivos online/offline, teléfonos registrados)
+
+**URL del Backend en Producción:**
+- Local: `http://localhost:3001`
+- Servidor: `http://IP_DEL_SERVIDOR:3001` (configurar en Dispositivo A y App)
 
 ### App Móvil
 ```bash
@@ -200,16 +260,24 @@ const BACKEND_URL = 'http://192.168.1.X:3000';  // Tu IP local aquí
 
 ## 🔧 Configuración Clave
 
-### Backend - Variables de Timeout
+### Backend - Variables de Timeout y Puerto
 
 En `backend/server.js`:
 
 ```javascript
+// Puerto (definido en .env o por defecto 3000)
+const PORT = process.env.PORT || 3000;
+
 // Cuánto tiempo esperar sin heartbeat antes de alertar
 const TIMEOUT_MS = 2 * 60 * 1000;  // 2 minutos
 
 // Frecuencia de verificación
 const CHECK_INTERVAL_MS = 30 * 1000;  // Cada 30 segundos
+```
+
+En `backend/.env` (servidor de producción):
+```bash
+PORT=3001
 ```
 
 ### Dispositivo A - Configuración
@@ -386,11 +454,23 @@ curl -X POST http://localhost:3000/trigger-alarm \
 
 ## 🐛 Debugging
 
-### Ver logs del backend
+### Ver logs del backend (Local)
 ```bash
 cd alarma-app/backend
 npm run dev
 # Observa la salida en tiempo real
+```
+
+### Ver logs del backend (Servidor de Producción)
+```bash
+# Si corre con PM2:
+pm2 logs alarma-backend
+
+# Ver procesos activos:
+pm2 status
+
+# Si corre directamente con logs en archivo:
+tail -f /var/log/alarma-backend.log
 ```
 
 Esperar ver:
@@ -400,6 +480,16 @@ Esperar ver:
    ✅ dispositivo-principal OK (alarma en 90s si no responde)
 ```
 
+### Ver dispositivos registrados (Local)
+```bash
+curl http://localhost:3000/devices
+```
+
+### Ver dispositivos registrados (Servidor)
+```bash
+curl http://IP_DEL_SERVIDOR:3001/devices
+```
+
 ### Ver logs de la app
 Los logs aparecen en la pantalla de la app en la sección "📋 Eventos Recientes"
 
@@ -407,19 +497,21 @@ Los logs aparecen en la pantalla de la app en la sección "📋 Eventos Reciente
 
 | Síntoma | Causa | Solución |
 |---------|-------|----------|
-| App no conecta a backend | IP incorrecta | Actualizar `BACKEND_URL` en App.tsx con tu IP local |
-| Backend no recibe heartbeats | URL incorrecta | Verificar `BACKEND_URL` en heartbeat.py |
+| App no conecta a backend | IP incorrecta | Actualizar `BACKEND_URL` en App.tsx con IP del servidor |
+| Backend no recibe heartbeats | URL incorrecta | Verificar `BACKEND_URL` en heartbeat.py apunte al servidor |
 | No suena alarma cerrada | Optimización batería | Configurar "Sin restricciones" para Expo Go |
-| "No hay teléfonos registrados" | App no se registró | Reabrir app, verificar conexión |
+| "No hay teléfonos registrados" | App no se registró | Reabrir app, verificar conexión con servidor |
+| Backend se detiene al cerrar SSH | No está usando PM2 | Configurar PM2: `pm2 start server.js --name "alarma-backend"` |
 
 ---
 
 ## ⚠️ Limitaciones Conocidas
 
-### 1. Red Local (Modo Desarrollo Actual)
-- Todo funciona en red WiFi local
-- Dispositivo A, Backend y Teléfono deben estar en la misma red
-- Para producción: subir backend a la nube (Railway, Render, etc.)
+### 1. Backend en Producción (✅ Resuelto)
+- ~~Todo funciona en red WiFi local~~ → **Backend ahora en servidor VPS**
+- ~~Para producción: subir backend~~ → **✅ Completado**
+- **Nuevo**: Dispositivo A necesita URL pública del servidor
+- **Nuevo**: App móvil necesita IP/dominio del servidor en BACKEND_URL
 
 ### 2. Optimización de Batería (Android)
 Algunos fabricantes matan apps agresivamente:
@@ -447,12 +539,19 @@ Algunos fabricantes matan apps agresivamente:
 - [x] Heartbeat en Python local
 - [x] Documentación completa
 
-### Fase 2: Deploy Backend (⏭️ SIGUIENTE)
-- [ ] Crear cuenta en Railway/Render/Fly.io
-- [ ] Crear `Dockerfile` para backend
-- [ ] Deploy backend
-- [ ] Obtener URL pública HTTPS
-- [ ] Actualizar URLs en Dispositivo A y App
+### Fase 2: Deploy Backend (✅ COMPLETADO)
+- [x] ~~Crear cuenta en Railway/Render/Fly.io~~ → Usado VPS propio
+- [x] Backend desplegado en servidor
+- [x] Puerto configurado (3001)
+- [x] Heartbeats funcionando en producción
+- [x] Archivo `DEPLOY.md` creado con documentación
+
+### Fase 3: Configurar Acceso Público (⏭️ SIGUIENTE)
+- [ ] Configurar PM2 para mantener activo tras cerrar SSH
+- [ ] Abrir firewall o configurar reverse proxy (Nginx)
+- [ ] Configurar dominio (opcional)
+- [ ] Actualizar URLs en Dispositivo A (usar IP/dominio del servidor)
+- [ ] Actualizar URL en App móvil (BACKEND_URL)
 
 ### Fase 3: Build App Nativa
 - [ ] Configurar EAS Build (Expo Application Services)
@@ -510,15 +609,34 @@ style: cambios de formato
 
 ## 📞 Checklist para Continuar
 
-Cuando retomes este proyecto, verifica:
+### Estado Actual: Backend en Producción ✅
 
-- [ ] Repositorio clonado y actualizado (`git pull origin main`)
-- [ ] Backend: `npm install` ejecutado
-- [ ] App: `npm install` ejecutado
-- [ ] IP local actualizada en `App.tsx`
-- [ ] URL del backend configurada en `heartbeat.py` (si es producción)
-- [ ] Archivo `assets/alarm-sound.mp3` agregado (opcional, para sonido)
-- [ ] Dispositivo A, Backend y Teléfono en misma red (modo desarrollo)
+Cuando retomes este proyecto:
+
+### En el Servidor (ya configurado):
+- [x] Backend desplegado y funcionando (puerto 3001)
+- [x] Heartbeats siendo procesados correctamente
+- [ ] **Configurar PM2** para mantener activo tras cerrar SSH
+- [ ] **Abrir firewall** o configurar Nginx para acceso público
+- [ ] **Obtener IP pública** o configurar dominio del servidor
+
+### En el Proyecto Local:
+- [ ] Actualizar `App.tsx` con URL del servidor (no localhost)
+  ```typescript
+  const BACKEND_URL = 'http://IP_DEL_SERVIDOR:3001';
+  ```
+- [ ] Actualizar `dispositivo-a/heartbeat.py` con URL del servidor
+  ```python
+  BACKEND_URL = "http://IP_DEL_SERVIDOR:3001/heartbeat"
+  ```
+- [ ] Sincronizar cambios con GitHub (`git pull origin main`)
+- [ ] Agregar archivo `assets/alarm-sound.mp3` (opcional pero recomendado)
+
+### Pruebas de Integración:
+- [ ] Dispositivo A envía heartbeats al servidor
+- [ ] Backend detecta dispositivo "online" en `/status`
+- [ ] App se registra correctamente en backend
+- [ ] Simular caída (detener heartbeat) y verificar alarma en teléfono
 
 ---
 
