@@ -17,9 +17,8 @@ import {
 // ==========================================
 // CONFIGURACIÓN DEL BACKEND
 // ==========================================
-// ⚠️ IMPORTANTE: Cuando subas el backend a internet, cambia esta URL
-// Por ahora usamos localhost para pruebas con Expo (requiere configuración especial)
-const BACKEND_URL = 'http://192.168.1.X:3000'; // <-- Cambia esto por tu IP local
+// ✅ Backend desplegado en producción (IP del servidor VPS)
+const BACKEND_URL = 'http://216.238.87.147:3001';
 
 // Nombre del task de background
 const BACKGROUND_NOTIFICATION_TASK = 'BACKGROUND-NOTIFICATION-TASK';
