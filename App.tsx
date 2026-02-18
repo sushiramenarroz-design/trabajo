@@ -25,12 +25,27 @@ const BACKGROUND_NOTIFICATION_TASK = 'BACKGROUND-NOTIFICATION-TASK';
 
 // Configurar el handler de notificaciones
 Notifications.setNotificationHandler({
-  handleNotification: async () => ({
+  handleNotification: async (): Promise<Notifications.NotificationBehavior> => ({
     shouldShowAlert: true,
-    shouldPlaySound: false, // Controlamos el sonido manualmente
+    shouldPlaySound: false,
     shouldSetBadge: false,
+    shouldShowBanner: true,
+    shouldShowList: true,
   }),
 });
+
+// Tipado para los datos del background task
+interface BackgroundTaskData {
+  notification?: {
+    request: {
+      content: {
+        data?: {
+          type?: string;
+        };
+      };
+    };
+  };
+}
 
 // Definir el task de background - ESTO SE EJECUTA INCLUSO CON LA APP CERRADA
 TaskManager.defineTask(BACKGROUND_NOTIFICATION_TASK, async ({ data, error }) => {
@@ -39,9 +54,10 @@ TaskManager.defineTask(BACKGROUND_NOTIFICATION_TASK, async ({ data, error }) => 
     return;
   }
 
-  if (data) {
-    const notification = data.notification;
-    const notificationData = notification?.request?.content?.data;
+  const taskData = data as BackgroundTaskData | undefined;
+  
+  if (taskData?.notification) {
+    const notificationData = taskData.notification.request.content.data;
     
     // Verificar si es una alarma
     if (notificationData?.type === 'alarm') {
@@ -63,8 +79,8 @@ export default function App() {
   const [status, setStatus] = useState('📱 App iniciada');
   const [logs, setLogs] = useState<string[]>([]);
 
-  const notificationListener = useRef<Notifications.Subscription>();
-  const responseListener = useRef<Notifications.Subscription>();
+  const notificationListener = useRef<Notifications.Subscription | null>(null);
+  const responseListener = useRef<Notifications.Subscription | null>(null);
 
   // Helper para agregar logs en pantalla
   const addLog = (message: string) => {
@@ -91,10 +107,10 @@ export default function App() {
   const cleanup = () => {
     stopAlarmSound();
     if (notificationListener.current) {
-      Notifications.removeNotificationSubscription(notificationListener.current);
+      notificationListener.current.remove();
     }
     if (responseListener.current) {
-      Notifications.removeNotificationSubscription(responseListener.current);
+      responseListener.current.remove();
     }
   };
 
