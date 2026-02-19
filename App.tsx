@@ -136,21 +136,20 @@ export default function App() {
         return;
       }
 
-      addLog('Obteniendo token de notificaciones...');
+      addLog('Obteniendo token Expo...');
       
-      // Intentar obtener token (puede fallar en Expo Go sin projectId)
+      // Obtener token Expo real (ahora con projectId configurado)
       let token: string | null = null;
       try {
-        token = (await Notifications.getExpoPushTokenAsync()).data;
+        const tokenData = await Notifications.getExpoPushTokenAsync({
+          projectId: 'a1f794f3-fd3f-4eb3-b954-e0e1b86683bb'
+        });
+        token = tokenData.data;
+        addLog('✅ Token Expo obtenido correctamente');
       } catch (tokenError) {
-        addLog('⚠️ Usando modo local (sin token Expo)');
-        // En modo desarrollo sin token, usamos un ID local único
-        token = `local-${Platform.OS}-${Date.now()}`;
-      }
-      
-      if (!token) {
-        addLog('❌ No se pudo obtener token');
-        setStatus('⚠️ Error de notificaciones');
+        addLog('⚠️ Error obteniendo token Expo:');
+        addLog(String(tokenError));
+        addLog('💡 ¿Estás usando Expo Go? El token real requiere Development Build');
         return;
       }
       

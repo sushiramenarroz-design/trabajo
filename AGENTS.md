@@ -320,10 +320,25 @@ MAX_REINTENTOS = 3
 En `App.tsx`:
 
 ```typescript
-// ⚠️ CRÍTICO: Usar IP local de tu computadora, NO localhost
-// Obtener IP: ejecutar 'ipconfig' en CMD
-const BACKEND_URL = 'http://192.168.1.X:3000';  // Ej: 192.168.1.45
+// ✅ Backend desplegado en producción
+const BACKEND_URL = 'http://216.238.87.147:3001';
 ```
+
+### App Móvil - Configuración Expo
+
+En `app.json`:
+
+```json
+{
+  "extra": {
+    "eas": {
+      "projectId": "a1f794f3-fd3f-4eb3-b954-e0e1b86683bb"
+    }
+  }
+}
+```
+
+**Nota**: Para usar notificaciones push reales (app cerrada), debes generar un **Development Build** con EAS, no usar Expo Go.
 
 ---
 
@@ -576,12 +591,12 @@ Algunos fabricantes matan apps agresivamente:
 - [ ] Probar registro de token desde App al servidor
 - [ ] Prueba completa: detener heartbeat → esperar alarma
 
-### Fase 3: Build App Nativa
-- [ ] Configurar EAS Build (Expo Application Services)
-- [ ] Crear cuenta Expo
-- [ ] Generar APK/AAB con `eas build`
-- [ ] Instalar APK directo en teléfono (sin Expo Go)
-- [ ] Configurar Firebase para notificaciones propias
+### Fase 3: Build App Nativa (⏭️ AHORA)
+- [x] Crear cuenta Expo
+- [x] Project ID configurado: `a1f794f3-fd3f-4eb3-b954-e0e1b86683bb`
+- [ ] Generar Development Build con `eas build`
+- [ ] Instalar APK en teléfono (sin Expo Go)
+- [ ] Verificar token Expo real recibido en backend
 
 ### Fase 4: Producción Avanzada
 - [ ] Base de datos persistente (PostgreSQL/MongoDB)
