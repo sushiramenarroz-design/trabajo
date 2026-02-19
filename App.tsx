@@ -17,13 +17,10 @@ import {
 // ==========================================
 // CONFIGURACIÓN DEL BACKEND
 // ==========================================
-// ✅ Backend desplegado en producción (IP del servidor VPS)
 const BACKEND_URL = 'http://216.238.87.147:3001';
 
-// Nombre del task de background
 const BACKGROUND_NOTIFICATION_TASK = 'BACKGROUND-NOTIFICATION-TASK';
 
-// Configurar el handler de notificaciones
 Notifications.setNotificationHandler({
   handleNotification: async (): Promise<Notifications.NotificationBehavior> => ({
     shouldShowAlert: true,
@@ -34,7 +31,6 @@ Notifications.setNotificationHandler({
   }),
 });
 
-// Tipado para los datos del background task
 interface BackgroundTaskData {
   notification?: {
     request: {
@@ -47,7 +43,6 @@ interface BackgroundTaskData {
   };
 }
 
-// Definir el task de background - ESTO SE EJECUTA INCLUSO CON LA APP CERRADA
 TaskManager.defineTask(BACKGROUND_NOTIFICATION_TASK, async ({ data, error }) => {
   if (error) {
     console.error('Error en background task:', error);
@@ -59,18 +54,14 @@ TaskManager.defineTask(BACKGROUND_NOTIFICATION_TASK, async ({ data, error }) => 
   if (taskData?.notification) {
     const notificationData = taskData.notification.request.content.data;
     
-    // Verificar si es una alarma
     if (notificationData?.type === 'alarm') {
       console.log('🚨 Alarma recibida en BACKGROUND');
-      
-      // Reproducir sonido de alarma
       await configureAlarmAudio();
       await playAlarmSound();
     }
   }
 });
 
-// Registrar el task de background
 Notifications.registerTaskAsync(BACKGROUND_NOTIFICATION_TASK);
 
 export default function App() {
@@ -82,7 +73,6 @@ export default function App() {
   const notificationListener = useRef<Notifications.Subscription | null>(null);
   const responseListener = useRef<Notifications.Subscription | null>(null);
 
-  // Helper para agregar logs en pantalla
   const addLog = (message: string) => {
     const timestamp = new Date().toLocaleTimeString();
     setLogs(prev => [`[${timestamp}] ${message}`, ...prev].slice(0, 20));
@@ -117,11 +107,12 @@ export default function App() {
   const registerForPushNotifications = async () => {
     try {
       if (!Device.isDevice) {
-        Alert.alert('Nota', 'Las notificaciones push requieren un dispositivo físico. Usa un Android real, no el emulador.');
-        addLog('⚠️ Usando emulador - Notificaciones no funcionarán');
+        Alert.alert('Nota', 'Esta app requiere un dispositivo físico Android');
+        addLog('⚠️ Emulador detectado');
         return;
       }
 
+      addLog('Solicitando permisos...');
       const { status: existingStatus } = await Notifications.getPermissionsAsync();
       let finalStatus = existingStatus;
       
@@ -131,48 +122,59 @@ export default function App() {
       }
       
       if (finalStatus !== 'granted') {
-        Alert.alert('Permiso denegado', 'No se otorgaron permisos de notificación');
-        addLog('❌ Permiso de notificaciones denegado');
+        addLog('❌ Permisos denegados');
+        setStatus('⚠️ Sin permisos de notificación');
         return;
       }
 
-      addLog('Obteniendo token Expo...');
+      addLog('Obteniendo token...');
       
-      // Obtener token Expo real (ahora con projectId configurado)
+      // Intentar obtener token Expo (con projectId)
       let token: string | null = null;
       try {
         const tokenData = await Notifications.getExpoPushTokenAsync({
           projectId: 'a1f794f3-fd3f-4eb3-b954-e0e1b86683bb'
         });
         token = tokenData.data;
-        addLog('✅ Token Expo obtenido correctamente');
-      } catch (tokenError) {
-        addLog('⚠️ Error obteniendo token Expo:');
-        addLog(String(tokenError));
-        addLog('💡 ¿Estás usando Expo Go? El token real requiere Development Build');
+        addLog('✅ Token Expo obtenido');
+      } catch (expoError) {
+        // Si falla, usar token local único
+        addLog('⚠️ Token Expo no disponible (requiere FCM)');
+        addLog('💡 Usando modo local...');
+        token = `local-${Platform.OS}-${Date.now()}`;
+        addLog('✅ Token local generado');
+      }
+      
+      if (!token) {
+        addLog('❌ No se pudo obtener token');
         return;
       }
       
       setExpoPushToken(token);
-      addLog('✅ Token obtenido');
       
       // Enviar token al backend
-      addLog('Registrando en backend...');
-      addLog(`🌐 URL: ${BACKEND_URL}`);
+      addLog('🌐 Conectando al backend...');
+      addLog(`URL: ${BACKEND_URL}`);
       
       try {
         const result = await registerTokenWithBackend(token, BACKEND_URL);
         if (result.success) {
-          addLog('✅ Teléfono registrado en backend');
-          setStatus('✅ Listo - Esperando alarmas');
+          if (token.startsWith('local-')) {
+            addLog('✅ Registrado (modo local)');
+            addLog('💡 Nota: App debe estar abierta para recibir alarmas');
+            setStatus('✅ Listo (modo local)');
+          } else {
+            addLog('✅ Registrado con token Expo');
+            setStatus('✅ Listo - Esperando alarmas');
+          }
         } else {
-          addLog(`❌ Error: ${result.error}`);
-          setStatus('⚠️ Error de registro - revisa logs');
+          addLog(`❌ Error backend: ${result.error}`);
+          setStatus('⚠️ Error de registro');
         }
       } catch (fetchError) {
         addLog(`❌ Error de red: ${fetchError}`);
-        addLog('💡 Verifica: ¿Estás en la misma red? ¿El backend está activo?');
-        setStatus('⚠️ No se pudo conectar al backend');
+        addLog('💡 Verifica tu conexión WiFi/4G');
+        setStatus('⚠️ Sin conexión al servidor');
       }
       
     } catch (error) {
@@ -182,7 +184,6 @@ export default function App() {
   };
 
   const setupNotificationListeners = () => {
-    // Listener para notificaciones en foreground
     notificationListener.current = Notifications.addNotificationReceivedListener(
       async (notification) => {
         const data = notification.request.content.data;
@@ -195,7 +196,6 @@ export default function App() {
       }
     );
 
-    // Listener para respuesta a notificaciones
     responseListener.current = Notifications.addNotificationResponseReceivedListener(
       async (response) => {
         const data = response.notification.request.content.data;
@@ -222,7 +222,7 @@ export default function App() {
   };
 
   const simulateAlarm = async () => {
-    addLog('🧪 Simulando alarma local...');
+    addLog('🧪 Simulando alarma...');
     await Notifications.scheduleNotificationAsync({
       content: {
         title: '🚨 ALARMA DE PRUEBA 🚨',
@@ -236,33 +236,24 @@ export default function App() {
   };
 
   return (
-    <View style={[
-      styles.container,
-      isAlarmActive && styles.alarmContainer
-    ]}>
+    <View style={[styles.container, isAlarmActive && styles.alarmContainer]}>
       <StatusBar style="light" />
       
       <Text style={styles.title}>🔔 Sistema de Alarma</Text>
       
-      {/* Status Principal */}
       <View style={styles.statusContainer}>
-        <Text style={[
-          styles.statusText,
-          isAlarmActive && styles.alarmStatusText
-        ]}>
+        <Text style={[styles.statusText, isAlarmActive && styles.alarmStatusText]}>
           {status}
         </Text>
       </View>
 
-      {/* Token Info */}
       <View style={styles.infoCard}>
         <Text style={styles.infoTitle}>📱 Tu Teléfono</Text>
         <Text style={styles.tokenText} numberOfLines={1}>
-          {expoPushToken ? expoPushToken.substring(0, 30) + '...' : 'Registrando...'}
+          {expoPushToken ? expoPushToken.substring(0, 35) + '...' : 'Registrando...'}
         </Text>
       </View>
 
-      {/* Botones */}
       <View style={styles.buttonContainer}>
         {isAlarmActive ? (
           <TouchableOpacity 
@@ -283,7 +274,6 @@ export default function App() {
         )}
       </View>
 
-      {/* Logs */}
       <View style={styles.logsContainer}>
         <Text style={styles.logsTitle}>📋 Eventos Recientes:</Text>
         <ScrollView style={styles.logsScroll}>
@@ -297,13 +287,9 @@ export default function App() {
         </ScrollView>
       </View>
 
-      {/* Instrucciones */}
       <View style={styles.infoContainer}>
         <Text style={styles.infoText}>
-          ℹ️ Esta app se mantiene en segundo plano.
-        </Text>
-        <Text style={styles.infoText}>
-            No necesitas tenerla abierta.
+          ℹ️ Modo: {expoPushToken?.startsWith('local-') ? 'Local (app abierta)' : 'Expo Push'}
         </Text>
       </View>
     </View>
@@ -376,10 +362,6 @@ const styles = StyleSheet.create({
     paddingHorizontal: 50,
     borderRadius: 12,
     elevation: 5,
-    shadowColor: '#f59e0b',
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.3,
-    shadowRadius: 8,
   },
   testButtonText: {
     color: '#fff',
@@ -393,7 +375,6 @@ const styles = StyleSheet.create({
     borderRadius: 15,
     borderWidth: 3,
     borderColor: '#fff',
-    elevation: 10,
   },
   stopButtonText: {
     color: '#fff',
