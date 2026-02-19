@@ -130,16 +130,35 @@ app.get('/devices/:id', (req, res) => {
 app.post('/register-token', (req, res) => {
   const { token, platform, deviceId } = req.body;
   
-  if (!token || !Expo.isExpoPushToken(token)) {
-    return res.status(400).json({ error: 'Token inválido' });
+  if (!token) {
+    return res.status(400).json({ error: 'Token requerido' });
+  }
+
+  // Verificar si es token de Expo o token local (modo desarrollo)
+  const isExpoToken = Expo.isExpoPushToken(token);
+  const isLocalToken = token.startsWith('local-');
+  
+  if (!isExpoToken && !isLocalToken) {
+    return res.status(400).json({ 
+      error: 'Token inválido',
+      details: 'El token debe ser un Expo Push Token válido o un token local (local-...)' 
+    });
   }
 
   mobileTokens.add(token);
-  console.log(`📱 Token móvil registrado: ${token.substring(0, 20)}...`);
+  
+  if (isLocalToken) {
+    console.log(`📱 Token LOCAL registrado (modo desarrollo): ${token.substring(0, 30)}...`);
+    console.log('💡 Nota: Las notificaciones push remotas NO funcionarán con token local');
+    console.log('   Usa el botón "Probar Alarma" en la app para probar localmente');
+  } else {
+    console.log(`📱 Token Expo registrado: ${token.substring(0, 20)}...`);
+  }
   
   res.json({ 
     success: true, 
     message: 'Teléfono registrado para alarmas',
+    tokenType: isLocalToken ? 'local' : 'expo',
     totalPhones: mobileTokens.size 
   });
 });
@@ -203,6 +222,7 @@ app.get('/status', (req, res) => {
 
 /**
  * Enviar notificación a todos los teléfonos registrados
+ * Nota: Los tokens locales (modo desarrollo) se registran pero no reciben push
  */
 async function sendNotificationToAll(title, body, data = {}) {
   if (mobileTokens.size === 0) {
@@ -210,9 +230,41 @@ async function sendNotificationToAll(title, body, data = {}) {
     return { success: false, reason: 'no_phones_registered' };
   }
 
-  const messages = [];
+  // Separar tokens de Expo (reales) de tokens locales (desarrollo)
+  const expoTokens = [];
+  const localTokens = [];
   
   for (const token of mobileTokens) {
+    if (Expo.isExpoPushToken(token)) {
+      expoTokens.push(token);
+    } else if (token.startsWith('local-')) {
+      localTokens.push(token);
+    }
+  }
+  
+  console.log(`📱 Tokens registrados: ${expoTokens.length} Expo, ${localTokens.length} locales`);
+
+  // Si hay tokens locales, solo loggear (no se pueden enviar push)
+  if (localTokens.length > 0) {
+    console.log('💡 Tokens locales detectados:');
+    console.log('   La app debe estar ABIERTA para recibir alarmas');
+    console.log('   Para notificaciones push reales, configura un projectId de Expo');
+  }
+
+  // Enviar notificaciones solo a tokens de Expo válidos
+  if (expoTokens.length === 0) {
+    console.log('⚠️ No hay tokens Expo válidos. No se enviarán notificaciones push.');
+    return { 
+      success: true, 
+      warning: 'No Expo tokens found',
+      localTokens: localTokens.length,
+      message: 'Solo tokens locales registrados. La app debe estar abierta.' 
+    };
+  }
+
+  const messages = [];
+  
+  for (const token of expoTokens) {
     messages.push({
       to: token,
       sound: 'default',
@@ -235,12 +287,18 @@ async function sendNotificationToAll(title, body, data = {}) {
     try {
       const ticketChunk = await expo.sendPushNotificationsAsync(chunk);
       tickets.push(...ticketChunk);
+      console.log(`✅ Notificaciones enviadas a ${chunk.length} dispositivos`);
     } catch (error) {
       console.error('Error enviando notificación:', error);
     }
   }
 
-  return { success: true, tickets };
+  return { 
+    success: true, 
+    expoTokens: expoTokens.length,
+    localTokens: localTokens.length,
+    tickets 
+  };
 }
 
 /**
