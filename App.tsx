@@ -159,13 +159,21 @@ export default function App() {
       
       // Enviar token al backend
       addLog('Registrando en backend...');
-      const registered = await registerTokenWithBackend(token, BACKEND_URL);
-      if (registered) {
-        addLog('✅ Teléfono registrado en backend');
-        setStatus('✅ Listo - Esperando alarmas');
-      } else {
-        addLog('❌ Error registrando en backend');
-        setStatus('⚠️ Error de conexión con backend');
+      addLog(`🌐 URL: ${BACKEND_URL}`);
+      
+      try {
+        const result = await registerTokenWithBackend(token, BACKEND_URL);
+        if (result.success) {
+          addLog('✅ Teléfono registrado en backend');
+          setStatus('✅ Listo - Esperando alarmas');
+        } else {
+          addLog(`❌ Error: ${result.error}`);
+          setStatus('⚠️ Error de registro - revisa logs');
+        }
+      } catch (fetchError) {
+        addLog(`❌ Error de red: ${fetchError}`);
+        addLog('💡 Verifica: ¿Estás en la misma red? ¿El backend está activo?');
+        setStatus('⚠️ No se pudo conectar al backend');
       }
       
     } catch (error) {

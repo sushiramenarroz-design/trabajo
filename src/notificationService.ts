@@ -89,8 +89,10 @@ export const configureBackgroundNotifications = () => {
 /**
  * Envía el token push al backend
  */
-export const registerTokenWithBackend = async (token: string, backendUrl: string): Promise<boolean> => {
+export const registerTokenWithBackend = async (token: string, backendUrl: string): Promise<{success: boolean, error?: string}> => {
   try {
+    console.log(`[DEBUG] Intentando conectar a: ${backendUrl}/register-token`);
+    
     const response = await fetch(`${backendUrl}/register-token`, {
       method: 'POST',
       headers: {
@@ -103,10 +105,18 @@ export const registerTokenWithBackend = async (token: string, backendUrl: string
       }),
     });
 
-    return response.ok;
+    if (response.ok) {
+      const data = await response.json();
+      console.log('[DEBUG] Registro exitoso:', data);
+      return { success: true };
+    } else {
+      const errorText = await response.text();
+      console.error('[DEBUG] Error en respuesta:', response.status, errorText);
+      return { success: false, error: `HTTP ${response.status}: ${errorText}` };
+    }
   } catch (error) {
-    console.error('Error registrando token:', error);
-    return false;
+    console.error('[DEBUG] Error de conexión:', error);
+    return { success: false, error: String(error) };
   }
 };
 
