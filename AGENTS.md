@@ -540,9 +540,9 @@ Algunos fabricantes matan apps agresivamente:
 - Considerar implementar "grace period" o verificación de red
 
 ### 4. Sonido de alarma
-- Debes agregar archivo `assets/alarm-sound.mp3` manualmente
-- No incluido en repo por derechos de autor
-- Descargar de freesound.org o similar
+- ✅ Archivo `assets/alarm.mp3` agregado (169KB)
+- El backend usa este archivo para reproducir la alarma
+- Formato soportado: MP3
 
 ---
 
@@ -653,7 +653,7 @@ Cuando retomes este proyecto:
   BACKEND_URL = "http://216.238.87.147:3001/heartbeat"
   ```
 - [ ] Sincronizar cambios con GitHub (`git add -A && git commit -m "config: URLs producción" && git push`)
-- [ ] Agregar archivo `assets/alarm-sound.mp3` (opcional pero recomendado)
+- [x] Archivo `assets/alarm.mp3` agregado ✅
 
 ### Pruebas de Integración (Después de actualizar URLs):
 - [ ] Dispositivo A envía heartbeats a `216.238.87.147:3001`

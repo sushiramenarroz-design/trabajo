@@ -39,7 +39,7 @@ export const playAlarmSound = async (): Promise<boolean> => {
     // Intentar cargar el sonido personalizado
     try {
       const { sound } = await Audio.Sound.createAsync(
-        require('../assets/alarm-sound.mp3'),
+        require('../assets/alarm.mp3'),
         {
           shouldPlay: true,
           isLooping: true,

@@ -48,6 +48,7 @@
         {
           "icon": "./assets/icon.png",
           "color": "#ff0000",
+          "sounds": ["./assets/alarm.mp3"],
           "enableBackgroundRemoteNotifications": true
         }
       ],
