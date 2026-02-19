@@ -1,5 +1,6 @@
 import * as Notifications from 'expo-notifications';
 import { Platform } from 'react-native';
+import * as Device from 'expo-device';
 
 /**
  * Configura el canal de notificaciones para Android
@@ -12,12 +13,50 @@ export const setupNotificationChannel = async () => {
       importance: Notifications.AndroidImportance.MAX,
       vibrationPattern: [0, 250, 250, 250],
       lightColor: '#FF0000',
-      sound: 'alarm-sound.wav', // Nombre del archivo de sonido
       enableLights: true,
       enableVibrate: true,
       lockscreenVisibility: Notifications.AndroidNotificationVisibility.PUBLIC,
-      bypassDnd: true, // Ignora el modo No Molestar
+      bypassDnd: true,
     });
+  }
+};
+
+/**
+ * Obtiene el token push del dispositivo
+ * Nota: En Expo Go sin proyecto configurado, esto puede fallar
+ */
+export const getPushToken = async (): Promise<string | null> => {
+  try {
+    if (!Device.isDevice) {
+      console.log('⚠️ Notificaciones push requieren dispositivo físico');
+      return null;
+    }
+
+    const { status: existingStatus } = await Notifications.getPermissionsAsync();
+    let finalStatus = existingStatus;
+    
+    if (existingStatus !== 'granted') {
+      const { status } = await Notifications.requestPermissionsAsync();
+      finalStatus = status;
+    }
+    
+    if (finalStatus !== 'granted') {
+      console.log('⚠️ Permiso de notificaciones denegado');
+      return null;
+    }
+
+    // Intentar obtener token de Expo
+    // Nota: Esto puede fallar en Expo Go sin projectId configurado
+    try {
+      const token = (await Notifications.getExpoPushTokenAsync()).data;
+      return token;
+    } catch (tokenError) {
+      console.log('⚠️ No se pudo obtener token Expo (normal en Expo Go sin configurar):', tokenError);
+      return null;
+    }
+  } catch (error) {
+    console.error('Error obteniendo token:', error);
+    return null;
   }
 };
 
@@ -30,22 +69,20 @@ export const scheduleLocalAlarmNotification = async () => {
       title: '🚨 ALARMA ACTIVADA 🚨',
       body: 'Se ha detectado una alarma en el sistema',
       data: { type: 'alarm', status: 'encendido', timestamp: Date.now() },
-      sound: 'alarm-sound.wav',
+      sound: 'default',
       priority: Notifications.AndroidNotificationPriority.MAX,
       vibrate: [0, 500, 500, 500],
       autoDismiss: false,
-      sticky: true, // La notificación no se puede deslizar para eliminar
+      sticky: true,
     },
-    trigger: null, // Inmediatamente
+    trigger: null,
   });
 };
 
 /**
  * Configura las notificaciones para ejecutar código en background
- * ESTO ES CRÍTICO: Permite que la app reproduzca sonido incluso cerrada
  */
 export const configureBackgroundNotifications = () => {
-  // Este task se ejecuta cuando llega una notificación en background
   Notifications.registerTaskAsync('BACKGROUND-NOTIFICATION-TASK');
 };
 

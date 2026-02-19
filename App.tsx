@@ -137,7 +137,23 @@ export default function App() {
       }
 
       addLog('Obteniendo token de notificaciones...');
-      const token = (await Notifications.getExpoPushTokenAsync()).data;
+      
+      // Intentar obtener token (puede fallar en Expo Go sin projectId)
+      let token: string | null = null;
+      try {
+        token = (await Notifications.getExpoPushTokenAsync()).data;
+      } catch (tokenError) {
+        addLog('⚠️ Usando modo local (sin token Expo)');
+        // En modo desarrollo sin token, usamos un ID local único
+        token = `local-${Platform.OS}-${Date.now()}`;
+      }
+      
+      if (!token) {
+        addLog('❌ No se pudo obtener token');
+        setStatus('⚠️ Error de notificaciones');
+        return;
+      }
+      
       setExpoPushToken(token);
       addLog('✅ Token obtenido');
       

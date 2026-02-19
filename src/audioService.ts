@@ -1,8 +1,8 @@
 import { Audio } from 'expo-av';
-import { Platform } from 'react-native';
+import { Platform, Vibration } from 'react-native';
 
 let alarmSound: Audio.Sound | null = null;
-let originalVolume = 1.0;
+let isPlayingFallback = false;
 
 /**
  * Configura el modo de audio para alarma
@@ -25,6 +25,7 @@ export const configureAlarmAudio = async () => {
 
 /**
  * Reproduce el sonido de alarma
+ * Si no existe el archivo, usa vibración como fallback
  */
 export const playAlarmSound = async (): Promise<boolean> => {
   try {
@@ -35,28 +36,36 @@ export const playAlarmSound = async (): Promise<boolean> => {
       alarmSound = null;
     }
 
-    // Crear nuevo sonido
-    const { sound } = await Audio.Sound.createAsync(
-      require('../assets/alarm-sound.mp3'),
-      {
-        shouldPlay: true,
-        isLooping: true,
-        volume: 1.0,
+    // Intentar cargar el sonido personalizado
+    try {
+      const { sound } = await Audio.Sound.createAsync(
+        require('../assets/alarm-sound.mp3'),
+        {
+          shouldPlay: true,
+          isLooping: true,
+          volume: 1.0,
+        }
+      );
+
+      alarmSound = sound;
+      await alarmSound.setVolumeAsync(1.0);
+      isPlayingFallback = false;
+      console.log('✅ Sonido de alarma reproducido');
+      return true;
+    } catch (soundError) {
+      // Si no existe el archivo, usar vibración como fallback
+      console.log('⚠️ Archivo de sonido no encontrado, usando vibración...');
+      isPlayingFallback = true;
+      
+      // Vibración continua (patrón: vibra 500ms, pausa 500ms, repite)
+      if (Platform.OS === 'android') {
+        Vibration.vibrate([500, 500], true);
+      } else {
+        Vibration.vibrate([500, 500], true);
       }
-    );
-
-    alarmSound = sound;
-
-    // Subir volumen al máximo
-    await alarmSound.setVolumeAsync(1.0);
-
-    // En Android, intentar controlar el volumen del sistema
-    if (Platform.OS === 'android') {
-      // Nota: Para controlar el volumen del sistema nativo
-      // necesitarías un módulo nativo o expo-volume-controller
+      
+      return true;
     }
-
-    return true;
   } catch (error) {
     console.error('Error reproduciendo alarma:', error);
     return false;
@@ -68,6 +77,13 @@ export const playAlarmSound = async (): Promise<boolean> => {
  */
 export const stopAlarmSound = async () => {
   try {
+    // Detener vibración si estaba en modo fallback
+    if (isPlayingFallback) {
+      Vibration.cancel();
+      isPlayingFallback = false;
+    }
+    
+    // Detener sonido si existe
     if (alarmSound) {
       await alarmSound.stopAsync();
       await alarmSound.unloadAsync();
@@ -75,6 +91,8 @@ export const stopAlarmSound = async () => {
     }
   } catch (error) {
     console.error('Error deteniendo alarma:', error);
+    // Asegurar que la vibración se detenga incluso si hay error
+    Vibration.cancel();
   }
 };
 
@@ -82,13 +100,14 @@ export const stopAlarmSound = async () => {
  * Verifica si la alarma está sonando
  */
 export const isAlarmPlaying = (): boolean => {
-  return alarmSound !== null;
+  return alarmSound !== null || isPlayingFallback;
 };
 
 /**
  * Obtiene el estado del sonido
  */
 export const getAlarmStatus = async (): Promise<string> => {
+  if (isPlayingFallback) return 'vibrating';
   if (!alarmSound) return 'stopped';
   
   const status = await alarmSound.getStatusAsync();

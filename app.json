@@ -37,8 +37,7 @@
         "VIBRATE",
         "MODIFY_AUDIO_SETTINGS"
       ],
-      "useNextNotificationsApi": true,
-      "googleServicesFile": "./google-services.json"
+      "useNextNotificationsApi": true
     },
     "web": {
       "favicon": "./assets/favicon.png"
@@ -47,9 +46,8 @@
       [
         "expo-notifications",
         {
-          "icon": "./assets/notification-icon.png",
+          "icon": "./assets/icon.png",
           "color": "#ff0000",
-          "sounds": ["./assets/alarm-sound.wav"],
           "enableBackgroundRemoteNotifications": true
         }
       ],
@@ -59,11 +57,6 @@
           "microphonePermission": false
         }
       ]
-    ],
-    "extra": {
-      "eas": {
-        "projectId": "your-project-id"
-      }
-    }
+    ]
   }
 }
