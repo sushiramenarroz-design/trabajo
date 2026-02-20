@@ -38,7 +38,8 @@
         "MODIFY_AUDIO_SETTINGS"
       ],
       "useNextNotificationsApi": true,
-      "package": "com.vasiliy_ortiz.alarmaapp"
+      "package": "com.vasiliy_ortiz.alarmaapp",
+      "googleServicesFile": "./google-services.json"
     },
     "web": {
       "favicon": "./assets/favicon.png"

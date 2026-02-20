@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "465793324619",
+    "project_id": "alarma-app-ca88d",
+    "storage_bucket": "alarma-app-ca88d.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:465793324619:android:c22512f40e99e4be2a9fce",
+        "android_client_info": {
+          "package_name": "com.vasiliy_ortiz.alarmaapp"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyCM34Fgxs5Qs66PeS5j8yQgdzkoweHp1PA"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
