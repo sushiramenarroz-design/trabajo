@@ -39,7 +39,8 @@
       ],
       "useNextNotificationsApi": true,
       "package": "com.vasiliy_ortiz.alarmaapp",
-      "googleServicesFile": "./google-services.json"
+      "googleServicesFile": "./google-services.json",
+      "usesCleartextTraffic": true
     },
     "web": {
       "favicon": "./assets/favicon.png"
