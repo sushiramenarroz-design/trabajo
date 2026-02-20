@@ -49,15 +49,22 @@ TaskManager.defineTask(BACKGROUND_NOTIFICATION_TASK, async ({ data, error }) => 
     return;
   }
 
-  const taskData = data as BackgroundTaskData | undefined;
+  // Verificar que data existe y tiene la estructura esperada
+  if (!data) {
+    console.log('Background task: No data received');
+    return;
+  }
+
+  // El formato correcto según expo-notifications
+  const notificationData = (data as any)?.notification?.request?.content?.data;
   
-  if (taskData?.notification) {
-    const notificationData = taskData.notification.request.content.data;
-    
-    if (notificationData?.type === 'alarm') {
-      console.log('🚨 Alarma recibida en BACKGROUND');
+  if (notificationData?.type === 'alarm') {
+    console.log('🚨 Alarma recibida en BACKGROUND');
+    try {
       await configureAlarmAudio();
       await playAlarmSound();
+    } catch (soundError) {
+      console.error('Error reproduciendo sonido en background:', soundError);
     }
   }
 });
