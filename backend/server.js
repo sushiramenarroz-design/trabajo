@@ -6,8 +6,20 @@ require('dotenv').config();
 const app = express();
 const expo = new Expo();
 
-app.use(cors());
-app.use(express.json());
+// Configuración CORS explícita para React Native
+app.use(cors({
+  origin: '*',
+  methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
+  allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With'],
+  credentials: false,
+  optionsSuccessStatus: 200
+}));
+
+// Manejar preflight OPTIONS manualmente
+app.options('*', cors());
+
+app.use(express.json({ limit: '10mb' }));
+app.use(express.urlencoded({ extended: true, limit: '10mb' }));
 
 // Log de todas las peticiones
 app.use((req, res, next) => {

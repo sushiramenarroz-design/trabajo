@@ -93,17 +93,25 @@ export const registerTokenWithBackend = async (token: string, backendUrl: string
   try {
     console.log(`[DEBUG] Intentando conectar a: ${backendUrl}/register-token`);
     
+    // Crear un AbortController para manejar timeout manual
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 10000); // 10 segundos timeout
+    
     const response = await fetch(`${backendUrl}/register-token`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
+        'Accept': 'application/json',
       },
       body: JSON.stringify({
         token,
         platform: Platform.OS,
         deviceId: Platform.OS === 'ios' ? 'ios-device' : 'android-device',
       }),
+      signal: controller.signal,
     });
+    
+    clearTimeout(timeoutId);
 
     if (response.ok) {
       const data = await response.json();
