@@ -9,6 +9,12 @@ const expo = new Expo();
 app.use(cors());
 app.use(express.json());
 
+// Log de todas las peticiones
+app.use((req, res, next) => {
+  console.log(`[${new Date().toISOString()}] ${req.method} ${req.url} - ${req.headers['user-agent'] || 'unknown'}`);
+  next();
+});
+
 // ==========================================
 // BASE DE DATOS EN MEMORIA
 // ==========================================
@@ -121,6 +127,18 @@ app.get('/devices/:id', (req, res) => {
 });
 
 // ==========================================
+// ENDPOINT RAÍZ (para verificar conectividad)
+// ==========================================
+app.get('/', (req, res) => {
+  res.json({ 
+    status: 'online', 
+    message: 'Backend de Alarmas funcionando',
+    endpoints: ['/status', '/devices', '/register-token', '/trigger-alarm'],
+    timestamp: new Date().toISOString()
+  });
+});
+
+// ==========================================
 // ENDPOINTS DE LA APP MÓVIL
 // ==========================================
 
@@ -128,6 +146,10 @@ app.get('/devices/:id', (req, res) => {
  * POST /register-token - Tu teléfono se registra para recibir alarmas
  */
 app.post('/register-token', (req, res) => {
+  console.log(`📱 POST /register-token recibido de ${req.headers['x-forwarded-for'] || req.connection.remoteAddress}`);
+  console.log(`   Headers: ${JSON.stringify(req.headers['content-type'])}`);
+  console.log(`   Body: ${JSON.stringify(req.body).substring(0, 100)}...`);
+  
   const { token, platform, deviceId } = req.body;
   
   if (!token) {
